@@ -1,2 +1,20 @@
+sudo: require
+language: generic
+services:
+    - docker
+
+before_install:
+    - docker build -t ausgeflippte/docker-test -f ./client/Dockerfile.dev ./client
 script:
-    - docker run -e CI=true USERNAME/react-test npm test
+    - docker run -e CI=true ausgeflippte/docker-test npm test
+
+after_success:
+    - docker build -t ausgeflippte/docker-multi-client ./client
+    - docker build -t ausgeflippte/docker-multi-nginx ./nginx
+    - docker build -t ausgeflippte/docker-multi-server ./server
+    - docker build -t ausgeflippte/docker-multi-worker ./worker
+    - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_ID" --password-stdin
+    - docker push docker-multi-client
+    - docker push docker-multi-nginx
+    - docker push docker-multi-server
+    - docker push docker-multi-worker
