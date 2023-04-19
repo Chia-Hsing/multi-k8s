@@ -1,0 +1,23 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+    name: worker-deployment
+spec:
+    replicas: 1
+    selector:
+        matchLabels:
+            component: worker
+    template:
+        metadata:
+            labels:
+                component: worker
+        spec:
+            containers:
+                - name: worker
+                  image: ausgeflippte/docker-multi-worker
+                  env:
+                      - name: REDIS_HOST
+                        # 這邊的 host 可以直接是要連接的 Deployment 的 ClusterIP name。
+                        value: redis-cluster-ip-service
+                      - name: REDIS_PORT
+                        value: '6379'

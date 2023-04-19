@@ -1,0 +1,31 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+    name: ingress-service
+    # annotations 是對於 Ingress 的 higher level configuration
+    annotations:
+        # 告訴 kubernetes 要基於 nginx 建立 controller
+        kubernetes.io/ingress.class: nginx
+        # 實踐上的 nginx copy 的行為設定。這條 rule 會覆寫往 server 的 request 的 api url，移除掉 /api 的部分。只剩下 /。
+        nginx.ingress.kubernetes.io/rewrite-target: /$1
+        nginx.ingress.kubernetes.io/use-regex: 'true'
+spec:
+    rules:
+        - http:
+              # routing rules
+              paths:
+                  - path: /?(.*)
+                    pathType: Prefix
+                    backend:
+                        service:
+                            # service 的 名稱
+                            name: client-cluster-ip-service
+                            port:
+                                number: 3000
+                  - path: /api/?(.*)
+                    pathType: Prefix
+                    backend:
+                        service:
+                            name: server-cluster-ip-service
+                            port:
+                                number: 5000

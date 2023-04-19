@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+    name: postgres-deployment
+spec:
+    replicas: 1
+    selector:
+        matchLabels:
+            component: postgres
+    template:
+        metadata:
+            labels:
+                component: postgres
+        spec:
+            volumes:
+                - name: postgres-storage
+                  persistentVolumeClaim:
+                      # 宣告要建立一個 persistent volume claim，這個 persistent volume claim 的建立設定要參照 database-persistent-volume-claim.yaml 這個 config 檔。
+                      claimName: database-persistent-volume-claim
+            containers:
+                - name: postgres
+                  image: postgres
+                  env:
+                      - name: POSTGRES_PASSWORD
+                        valueFrom:
+                            secretKeyRef:
+                                name: pgpassword
+                                key: PGPASSWORD
+                  ports:
+                      - containerPort: 5432
+                  volumeMounts:
+                      # 這個 container 會使用到哪個 persistent volume。這個名稱會跟上面 volumes 的名稱一樣。
+                      - name: postgres-storage
+                        # 這個 container 中的哪個路徑會儲存到 persistent volume。在 postgres 中，預設會將資料儲存到 /var/lib/postgressql/data 這個路徑。
+                        mountPath: /var/lib/postgressql/data
+                        # 只的是檔案會儲存在 persistent volume 的 postgres 目錄底下。也就是 postgres 目錄底下的 /var/lib/postgressql/data 路徑。
+                        subPath: postgres
