@@ -1,0 +1,13 @@
+sudo: required
+# 我們需要 docker-cli 在 run build 前 pre-installed
+services:
+    - docker
+before_install:
+    # 在 travis ci 分配給我們的 instance 上安裝 google cloud sdk
+    - curl https://sdk.cloud.google.com | bash > /dev/null;
+    # apply 安裝的 sdk。$HOME/google-cloud-sdk 是 預設安裝的 directory，path.bash.inc 是 file。
+    - source $HOME/google-cloud-sdk/path.bash.inc
+    # 安裝 kubectl。
+    - gcloud components update kubectl
+    # activate-service-account 等於是 AWS 的 IAM。這邊是告訴 google cloud(sdk) 我們是誰，並且透過 service-account.json 提供 credentials。
+    - gcloud auth activate-service-account --key-file service-account.json
