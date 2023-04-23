@@ -1,0 +1,19 @@
+# 這個 Issuer object 並不在 kubernetes 預設的 object 中，而是由 cert-manager 所建立的。
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+    name: letsencrypt-prod
+spec:
+    acme:
+        server: https://acme-v02.api.letsencrypt.org/directory
+        # 雖然 cert-manager 規定 config 中要有 email 欄位，但是基本上不會被使用到。
+        email: 'test@test.com'
+        # 這是在 LetsEncrypt 在驗證階段會使用到的 keySecret。
+        privateKeySecretRef:
+            name: letsencrypt-prod
+        # solvers 基本上是在定義我們整個經過第三方驗證機構驗證的流程。
+        solvers:
+            # 就是範例圖中的那個 flow。
+            - http01:
+                  ingress:
+                      class: nginx

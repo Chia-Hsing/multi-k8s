@@ -1,0 +1,16 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+    name: yourdomain-com-tls
+spec:
+    # 由 Certificate 建立的 Secret 的名稱。
+    secretName: yourdomain-com
+    # 會使用的 Issuer。
+    issuerRef:
+        name: letsencrypt-prod
+        kind: ClusterIssuer
+    # 這個 certificate 在哪個 domain 下有效。
+    commonName: yourdomain.com
+    dnsNames:
+        - yourdomain.com
+        - www.yourdomain.com
