@@ -2,7 +2,15 @@ sudo: required
 # 我們需要 docker-cli 在 run build 前 pre-installed
 services:
     - docker
+env:
+    global:
+        # 用最新 HEAD 的 git SHA 來作為 image 的版本。這樣一來每當 image 有改變，kubectl 就會強制讓 deployment 使用最新版本的 image。不然的話，kubectl 只會知道版本是 latest，以為沒改變就不會更新 deployment。
+        # 使用 SHA 最為 image 的版本還有個好處是方便 debugging。因為我們就可以知道目前在雲端運行的 image 對應到本地哪一個版本的 git commit。
+        - SHA=$(git rev-parse HEAD)
+        # 確保 google cloud cli 不會在 command 顯示任何需要用戶輸入資訊的 prompt，像是確認是否進行下一步的 prompt。（因為在 travis ci 中我們也無法回應）
+        - CLOUDSDK_CORE_DISABLE_PROMPTS=1
 before_install:
+    # 當 travis cli 執行到這段時，會自動 decrypt service-account.json.enc，讓第五行的 gcloud auth activate-service-account --key-file service-account.json 可以讀取到 service-account.json。google cloud 會利用他來登入 account。
     - openssl aes-256-cbc -K $encrypted_9f3b5599b056_key -iv $encrypted_9f3b5599b056_iv -in service-account.json.enc -out service-account.json -d
     # 在 travis ci 分配給我們的 instance 上安裝 google cloud sdk
     - curl https://sdk.cloud.google.com | bash > /dev/null;
@@ -12,3 +20,27 @@ before_install:
     - gcloud components update kubectl
     # activate-service-account 等於是 AWS 的 IAM。這邊是告訴 google cloud(sdk) 我們是誰，並且透過 service-account.json 提供 credentials。
     - gcloud auth activate-service-account --key-file service-account.json
+    # 我們要 work on 的 project。gcloud config set project <project id>
+    - gcloud config set project multi-k8s-384216
+    # 指定 cluster 的 compute zone。
+    - gcloud config set compute/zone asia-east1-a
+    # 指定我們確切要使用的 cluster。
+    - gcloud container clusters get-credentials multi-k8s
+    # 這是在 command line 直接登入 docker cli 的方法。
+    # "$DOCKER_PASSWORD" 是拿到我們在 travis 中設定的環境變數，然後傳入第二個區塊。
+    # --password-stdin 指的是將第一個區塊拿到的變數值作為 password 輸入。
+    - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_ID" --password-stdin
+    # build docker test image。
+    - docker build -t ausgeflippte/docker-test -f ./client/Dockerfile.dev ./client
+script:
+    # 執行測試。
+    - docker run -e CI=true ausgeflippte/docker-test npm test
+deploy:
+    # 原本的 provider 應該會是要告訴 travis-ci 應該在 deploy 前如何針對我們要部署的服務自動 pre-config。
+    # 但 travis-ci 沒有 kubernetes 的 build-in provider，所以我們必須自己撰寫 config。
+    provider: script
+    # custom script file 路徑。
+    script: bash ./deploy.sh
+    # 只有在 master branch 改變時執行 deploy script。
+    on:
+        branch: master
