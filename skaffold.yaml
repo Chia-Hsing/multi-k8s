@@ -1,0 +1,43 @@
+apiVersion: skaffold/v2beta12
+kind: Config
+# skaffold 要管理的所有 k8s config file。
+deploy:
+    kubectl:
+        manifests:
+            - ./k8s/*
+# 我們要 skaffold 管理的 images 的設定。
+build:
+    # skaffold 預設每當 build 新的 image 都會 push 上 image host 像是 docker hub。
+    local:
+        push: false
+    # skaffold 監視的本地 images。
+    artifacts:
+        - image: ausgeflippte/docker-multi-client
+          context: client
+          docker:
+              dockerfile: Dockerfile.dev
+          # mode 2。每當 skaffold 看到有以下路徑的檔案改變，它就會把這個檔案丟進 container。
+          sync:
+              manual:
+                  - src: 'src/**/*.js'
+                    dest: .
+                  - src: 'src/**/*.css'
+                    dest: .
+                  - src: 'src/**/*.html'
+                    dest: .
+        - image: ausgeflippte/docker-multi-worker
+          context: worker
+          docker:
+              dockerfile: Dockerfile.dev
+          sync:
+              manual:
+                  - src: '*.js'
+                    dest: .
+        - image: ausgeflippte/docker-multi-api
+          context: server
+          docker:
+              dockerfile: Dockerfile.dev
+          sync:
+              manual:
+                  - src: '*.js'
+                    dest: .

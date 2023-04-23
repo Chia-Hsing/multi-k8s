@@ -9,8 +9,41 @@ metadata:
         # 實踐上的 nginx copy 的行為設定。這條 rule 會覆寫往 server 的 request 的 api url，移除掉 /api 的部分。只剩下 /。
         nginx.ingress.kubernetes.io/rewrite-target: /$1
         nginx.ingress.kubernetes.io/use-regex: 'true'
+        # 讓 Ingress 知道，我們要使用 LetsEncrypt 所核發的 certificate。也就是告訴 Ingress 要預期從這個 Issuer 獲得 certificate。
+        cert-manager.io/cluster-issuer: 'letsencrypt-prod'
+        # 告訴 igress-nginx 永遠只能使用 https 來造訪這個服務。
+        nginx.ingress.kubernetes.io/ssl-redirect: 'true'
 spec:
+    tls:
+        # 告訴 nginx 要在這兩個 host 上 serve up https traffic。
+        - hosts:
+              - yourdomain.com
+              - www.yourdomain.com
+          # 允許 https 的 certificate 就儲存在這個名稱的 Secret 中。
+          secretName: yourdomain-com
     rules:
+        # 所有來造訪這個 host 的請求，都適用以下的規則。
+        - host: yourdomain.com
+        - http:
+              # routing rules
+              paths:
+                  - path: /?(.*)
+                    pathType: Prefix
+                    backend:
+                        service:
+                            # service 的 名稱
+                            name: client-cluster-ip-service
+                            port:
+                                number: 3000
+                  - path: /api/?(.*)
+                    pathType: Prefix
+                    backend:
+                        service:
+                            name: server-cluster-ip-service
+                            port:
+                                number: 5000
+        # 所有來造訪這個 host 的請求，都適用以下的規則。
+        - host: www.yourdomain.com
         - http:
               # routing rules
               paths:
